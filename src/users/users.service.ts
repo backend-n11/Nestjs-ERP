@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 import {hash, compare} from 'bcrypt'
 import { InjectModel } from '@nestjs/sequelize';
+import { Op } from 'sequelize';
 
 @Injectable()
 export class UsersService {
@@ -12,7 +13,10 @@ export class UsersService {
     private readonly userModel: typeof User
   ){}
 
-  async create(createUserDto: CreateUserDto):Promise<User> {
+  async create(createUserDto: CreateUserDto):Promise<User | any> {
+    const existUser = await this.userModel.findOne({'where' : {[Op.or] :[{'email' : createUserDto.email}, {'username' : createUserDto.username}]}})
+    if(existUser)
+      return new BadRequestException('User was already registered')
     const salt = Number(process.env.SALT)
     console.log(salt)
     const hashedPassword = await hash(createUserDto.password, salt)
